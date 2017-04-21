@@ -4,7 +4,8 @@
   "description": "Just a nice way to represent you pictures",
   "main": "index.js",
   "scripts": {
-    "test": "npm test"
+    "test": "npm test",
+    "build": "NODE_ENV=production ./node_modules/.bin/webpack"
   },
   "repository": {
     "type": "git",
