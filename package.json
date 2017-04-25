@@ -1,8 +1,8 @@
 {
   "name": "imagallery",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Just a nice way to represent you pictures",
-  "main": "index.js",
+  "main": "build/imagallery.min.js",
   "scripts": {
     "test": "npm test",
     "build": "NODE_ENV=production ./node_modules/.bin/webpack"
