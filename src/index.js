@@ -23,11 +23,15 @@ const applyScale = (image, scale) => {
   return image
 }
 
-const setOriginalSizes = (images) => {
+const copyImages = (images) => {
+  const newImages = []
   for (let image of images) {
-    image._width = image.width
-    image._height = image.height
+    let newImg = JSON.parse(JSON.stringify(image))
+    newImg._width = image.width
+    newImg._height = image.height
+    newImages.push(newImg)
   }
+  return newImages
 }
 
 // scales images in a list in a way that they are fit into a single row
@@ -132,13 +136,15 @@ const scaleImagesToHeight = (images, height) => {
 
 const fitImageToRow = (image, row) => {
   if (row.ratio < MIN_POST_RATIO) {
-    return {width: row.height * getRatio(image), height: 100 / MIN_POST_RATIO}
+    image.width = row.height * getRatio(image)
+    image.height = 100 / MIN_POST_RATIO
   } else if (row.ratio > MAX_POST_RATIO) {
     const scale = MAX_POST_RATIO / row.ratio
-    return {width: row.height * getRatio(image), height: 100 / MAX_POST_RATIO}
-  } else {
-    return image
+    image.width = row.height * getRatio(image)
+    image.height = 100 / MAX_POST_RATIO
   }
+
+  return image
 }
 
 const prepareChunkVariations = (images, maxChunks) => {
@@ -225,59 +231,66 @@ const preparePreview = (image, {width, height}) => {
   return {color: image.color, width, height}
 }
 
-module.exports = (images) => {
-  setOriginalSizes(images)
+const singlePreview = (images) => {
+  const image = images[0]
+  const preview = fitIntoSquare(image)
+  return [preview]
+}
 
+const twoImgPreviews = (images) => {
   const previews = []
+  const row = prepareRow(images, true)
 
-  if (images.length === 1) {
-    const image = images[0]
-    const p = fitIntoSquare(image)
-    previews.push(p)
-  } else if (images.length === 2) {
-    let row = prepareRow(images, true)
+  for (let image of row.images) {
+    const preview = fitImageToRow(image, row)
+    previews.push(preview)
+  }
 
+  return previews
+}
+
+const manyImgPreviews = (images) => {
+  const previews = []
+  const variant = getOptimalVariant(images)
+
+  if (variant.singleRow) {
+    const row = prepareRow(variant.singleRow, true)
     for (let image of row.images) {
-      const previewImg = fitImageToRow(image, row)
-      previewImg.color = image.color
-      const p = preparePreview(image, previewImg)
-      previews.push(p)
+      previews.push(fitImageToRow(image, row))
     }
-  } else if (images.length > 2) {
-    const variant = getOptimalVariant(images)
+  } else if (variant.cols) {
+    const cols = variant.cols.map((col) => { return prepareCol(col) })
+    const row = prepareRow(cols)
 
-    if (variant.singleRow) {
-      const row = prepareRow(variant.singleRow, true)
-      for (let image of row.images) {
-        const previewImg = fitImageToRow(image, row)
-        const p = preparePreview(image, previewImg)
-        previews.push(p)
+    for (let col of row.images) {
+      for (let nestedImage of col.images) {
+        previews.push(nestedImage)
       }
-    } else if (variant.cols) {
-      const cols = variant.cols.map((col) => { return prepareCol(col) })
-      const row = prepareRow(cols)
+    }
+  } else if (variant.rows) {
+    const rows = variant.rows.map((row) => { return prepareRow(row) })
+    const col = prepareCol(rows)
+    const scale = 100 / col.width
 
-      for (let col of row.images) {
-        for (let nestedImage of col.images) {
-          // const previewImg = fitImageToRow(nestedImage, row)
-          const p = preparePreview(nestedImage, nestedImage)
-          previews.push(p)
-        }
-      }
-    } else if (variant.rows) {
-      const rows = variant.rows.map((row) => { return prepareRow(row) })
-      const col = prepareCol(rows)
-      const scale = 100 / col.width
-
-      for (let row of col.images) {
-        for (let nestedImage of row.images) {
-          // const previewImg = fitImageToRow(nestedImage, row)
-          const p = preparePreview(nestedImage, applyScale(nestedImage, scale))
-          previews.push(p)
-        }
+    for (let row of col.images) {
+      for (let nestedImage of row.images) {
+        previews.push(applyScale(nestedImage, scale))
       }
     }
   }
 
   return previews
+}
+
+module.exports = (images) => {
+  // don't touch original images
+  images = copyImages(images)
+
+  if (images.length === 1) {
+    return singlePreview(images)
+  } else if (images.length === 2) {
+    return twoImgPreviews(images)
+  } else if (images.length > 2) {
+    return manyImgPreviews(images)
+  }
 }
