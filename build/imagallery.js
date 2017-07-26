@@ -85,8 +85,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var SQUARE = { width: 100, height: 66.66 };
-var MIN_POST_RATIO = SQUARE.width / SQUARE.height;
+var RECTANGLE = { width: 100, height: 66.66 };
+var MIN_POST_RATIO = RECTANGLE.width / RECTANGLE.height;
 var MAX_POST_RATIO = 3.5;
 
 var getRatio = function getRatio(image) {
@@ -94,7 +94,7 @@ var getRatio = function getRatio(image) {
 };
 
 var fitIntoSquare = function fitIntoSquare(image) {
-  var scale = Math.min(SQUARE.width / image.width, SQUARE.height / image.height);
+  var scale = Math.min(100 / image.width, 100 / image.height);
   return applyScale(image, scale);
 };
 

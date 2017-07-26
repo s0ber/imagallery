@@ -1,5 +1,5 @@
-const SQUARE = {width: 100, height: 66.66}
-const MIN_POST_RATIO = SQUARE.width / SQUARE.height
+const RECTANGLE = {width: 100, height: 66.66}
+const MIN_POST_RATIO = RECTANGLE.width / RECTANGLE.height
 const MAX_POST_RATIO = 3.5
 
 const getRatio = (image) => {
@@ -7,7 +7,7 @@ const getRatio = (image) => {
 }
 
 const fitIntoSquare = (image) => {
-  const scale = Math.min(SQUARE.width / image.width, SQUARE.height / image.height)
+  const scale = Math.min(100 / image.width, 100 / image.height)
   return applyScale(image, scale)
 }
 
