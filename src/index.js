@@ -1,20 +1,19 @@
-const RECTANGLE = {width: 100, height: 66.66}
-const MIN_POST_RATIO = RECTANGLE.width / RECTANGLE.height
-const MAX_POST_RATIO = 3.5
+const MOBILE_TARGET_RATIO = 0.666
+const DESKTOP_TARGET_RATIO = 1.5
 
 const getRatio = (image) => {
   return image.width / image.height
 }
 
 const fitIntoSquare = (image) => {
-  const scale = Math.min(100 / image.width, 100 / image.height)
+  const scale = Math.min(100 / image.width, 150 / image.height)
   return applyScale(image, scale)
 }
 
 const applyScale = (image, scale) => {
   const {width, height} = image
-  image.width = image.width * scale
-  image.height = image.height * scale
+  image.width *= scale
+  image.height *= scale
   if (image.images) {
     for (let image of image.images) {
       applyScale(image, scale)
@@ -35,7 +34,7 @@ const copyImages = (images) => {
 }
 
 // scales images in a list in a way that they are fit into a single row
-const prepareRow = (images, fixImbalanced = false) => {
+const prepareRow = (images) => {
   const rowHeight = 100 / images.map((image) => {
     return getRatio(image)
   }).reduce((a, b) => { return a + b }, 0)
@@ -54,7 +53,6 @@ const prepareRow = (images, fixImbalanced = false) => {
   })
 
   row.ratio = getRatio(row)
-  if (fixImbalanced) { row = fixImbalancedImages(row) }
   return row
 }
 
@@ -80,44 +78,6 @@ const prepareCol = (images) => {
   return col
 }
 
-const fixImbalancedImages = (row) => {
-  const RECOMMENDED_WIDTH = 1 / (row.images.length + 1)
-
-  if (row.ratio < MIN_POST_RATIO) {
-    let imbalancedNum = 0
-    let balancedNum = 0
-    let balancedWidth = 0
-
-    for (let image of row.images) {
-      if (getRatio(image) < RECOMMENDED_WIDTH) {
-        image._imbalanced = true
-        imbalancedNum++
-      } else {
-        balancedWidth += image.width
-        balancedNum++
-      }
-    }
-
-    for (let image of row.images) {
-      if (image._imbalanced) {
-        image.width = balancedWidth * RECOMMENDED_WIDTH / (1 - RECOMMENDED_WIDTH * imbalancedNum)
-        image.height = row.height
-        delete image._imbalanced
-        adjustRowColImages(image)
-      }
-    }
-    return prepareRow(row.images)
-  } else {
-    return row
-  }
-}
-
-const adjustRowColImages = (col) => {
-  if (col.images) {
-    scaleImagesToWidth(col.images, col.width)
-  }
-}
-
 const scaleImagesToWidth = (images, width) => {
   for (let image of images) {
     let ratio = getRatio(image)
@@ -132,19 +92,6 @@ const scaleImagesToHeight = (images, height) => {
     image.width = height * ratio
     image.height = height
   }
-}
-
-const fitImageToRow = (image, row) => {
-  if (row.ratio < MIN_POST_RATIO) {
-    image.width = row.height * getRatio(image)
-    image.height = 100 / MIN_POST_RATIO
-  } else if (row.ratio > MAX_POST_RATIO) {
-    const scale = MAX_POST_RATIO / row.ratio
-    image.width = row.height * getRatio(image)
-    image.height = 100 / MAX_POST_RATIO
-  }
-
-  return image
 }
 
 const prepareChunkVariations = (images, maxChunks) => {
@@ -198,6 +145,7 @@ const getOptimalVariant = (images) => {
   const variants = prepareVariants(images)
   let optimalVariant
   let optimalRatio
+  let targetRatio = DESKTOP_TARGET_RATIO
 
   for (let variant of variants) {
     let mosaicShape
@@ -214,7 +162,7 @@ const getOptimalVariant = (images) => {
 
     const ratio = getRatio(mosaicShape)
     if (optimalVariant) {
-      if (Math.abs(ratio - 1.5) < Math.abs(optimalRatio - 1.5)) {
+      if (Math.abs(ratio - targetRatio) < Math.abs(optimalRatio - targetRatio)) {
         optimalRatio = ratio
         optimalVariant = variant
       }
@@ -239,11 +187,10 @@ const singlePreview = (images) => {
 
 const twoImgPreviews = (images) => {
   const previews = []
-  const row = prepareRow(images, true)
+  const row = prepareRow(images)
 
   for (let image of row.images) {
-    const preview = fitImageToRow(image, row)
-    previews.push(preview)
+    previews.push(image)
   }
 
   return previews
@@ -256,7 +203,7 @@ const manyImgPreviews = (images) => {
   if (variant.singleRow) {
     const row = prepareRow(variant.singleRow, true)
     for (let image of row.images) {
-      previews.push(fitImageToRow(image, row))
+      previews.push(image)
     }
   } else if (variant.cols) {
     const cols = variant.cols.map((col) => { return prepareCol(col) })
