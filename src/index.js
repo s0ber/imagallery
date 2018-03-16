@@ -1,13 +1,13 @@
-const MOBILE_TARGET_RATIO = 0.666
+const MOBILE_SINGLE_PREVIEW_RATIO = 0.666
+const DESKTOP_SINGLE_PREVIEW_RATIO = 1
+
+const MOBILE_TARGET_RATIO = 0.66
 const DESKTOP_TARGET_RATIO = 1.5
+
+const MAX_VERTICAL_IMAGE_RATIO = 0.7
 
 const getRatio = (image) => {
   return image.width / image.height
-}
-
-const fitIntoSquare = (image) => {
-  const scale = Math.min(100 / image.width, 150 / image.height)
-  return applyScale(image, scale)
 }
 
 const applyScale = (image, scale) => {
@@ -141,11 +141,11 @@ const prepareVariants = (images) => {
   return variants
 }
 
-const getOptimalVariant = (images) => {
+const getOptimalVariant = (images, options) => {
   const variants = prepareVariants(images)
   let optimalVariant
   let optimalRatio
-  let targetRatio = DESKTOP_TARGET_RATIO
+  let targetRatio = options.type == 'desktop' ? DESKTOP_TARGET_RATIO : MOBILE_TARGET_RATIO
 
   for (let variant of variants) {
     let mosaicShape
@@ -179,13 +179,20 @@ const preparePreview = (image, {width, height}) => {
   return {color: image.color, width, height}
 }
 
-const singlePreview = (images) => {
+const singlePreview = (images, options) => {
   const image = images[0]
-  const preview = fitIntoSquare(image)
+  const targetRatio = options.type == 'desktop' ? DESKTOP_SINGLE_PREVIEW_RATIO : MOBILE_SINGLE_PREVIEW_RATIO
+  const scaleTo = {
+    width: 100,
+    height: 100 / targetRatio
+  }
+  const scale = Math.min(scaleTo.width / image.width, scaleTo.height / image.height)
+  const preview = applyScale(image, scale)
+
   return [preview]
 }
 
-const twoImgPreviews = (images) => {
+const twoImgPreviews = (images, options) => {
   const previews = []
   const row = prepareRow(images)
 
@@ -196,9 +203,9 @@ const twoImgPreviews = (images) => {
   return previews
 }
 
-const manyImgPreviews = (images) => {
+const manyImgPreviews = (images, options) => {
   const previews = []
-  const variant = getOptimalVariant(images)
+  const variant = getOptimalVariant(images, options)
 
   if (variant.singleRow) {
     const row = prepareRow(variant.singleRow, true)
@@ -229,15 +236,26 @@ const manyImgPreviews = (images) => {
   return previews
 }
 
-module.exports = (images) => {
-  // don't touch original images
-  images = copyImages(images)
+const fixVerticalImages = (images) => {
+  for (let image of images) {
+    if (getRatio(image) >= MAX_VERTICAL_IMAGE_RATIO) continue
+    image.height = image.width / MAX_VERTICAL_IMAGE_RATIO
+  }
+}
+
+module.exports =window.Imagallery = (images, options = {type: 'desktop'}) => {
+  let processorFn
+  images = copyImages(images) // don't touch original images
+
+  fixVerticalImages(images)
 
   if (images.length === 1) {
-    return singlePreview(images)
+    processorFn = singlePreview
   } else if (images.length === 2) {
-    return twoImgPreviews(images)
+    processorFn = twoImgPreviews
   } else if (images.length > 2) {
-    return manyImgPreviews(images)
+    processorFn = manyImgPreviews
   }
+
+  return processorFn(images, options)
 }
