@@ -243,7 +243,7 @@ const fixVerticalImages = (images) => {
   }
 }
 
-module.exports =window.Imagallery = (images, options = {type: 'desktop'}) => {
+module.exports = (images, options = {type: 'desktop'}) => {
   let processorFn
   images = copyImages(images) // don't touch original images
 
@@ -255,6 +255,8 @@ module.exports =window.Imagallery = (images, options = {type: 'desktop'}) => {
     processorFn = twoImgPreviews
   } else if (images.length > 2) {
     processorFn = manyImgPreviews
+  } else {
+    processorFn = () => {}
   }
 
   return processorFn(images, options)

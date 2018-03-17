@@ -642,7 +642,7 @@ var fixVerticalImages = function fixVerticalImages(images) {
   }
 };
 
-module.exports = window.Imagallery = function (images) {
+module.exports = function (images) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { type: 'desktop' };
 
   var processorFn = void 0;
@@ -656,6 +656,8 @@ module.exports = window.Imagallery = function (images) {
     processorFn = twoImgPreviews;
   } else if (images.length > 2) {
     processorFn = manyImgPreviews;
+  } else {
+    processorFn = function processorFn() {};
   }
 
   return processorFn(images, options);
