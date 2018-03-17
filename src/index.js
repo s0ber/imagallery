@@ -110,9 +110,9 @@ const prepareChunkVariations = (images, maxChunks) => {
       if (!p1 || !p2) continue
       const bigPart = p1.length > 1 ? p1 : p2
 
-      for (let i = 0; i < p1.length; i++) {
+      for (let i = 0; i < bigPart.length; i++) {
         if (i === 0) continue
-        let v = [bigPart.slice(0, i), bigPart.slice(i, p1.length)]
+        let v = [bigPart.slice(0, i), bigPart.slice(i, bigPart.length)]
         p1.length > 1 ? v.push(p2) : v.unshift(p1)
         variants.push(v)
       }

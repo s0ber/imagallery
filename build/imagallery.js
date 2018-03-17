@@ -297,9 +297,9 @@ var prepareChunkVariations = function prepareChunkVariations(images, maxChunks) 
         if (!p1 || !p2) continue;
         var bigPart = p1.length > 1 ? p1 : p2;
 
-        for (var _i = 0; _i < p1.length; _i++) {
+        for (var _i = 0; _i < bigPart.length; _i++) {
           if (_i === 0) continue;
-          var v = [bigPart.slice(0, _i), bigPart.slice(_i, p1.length)];
+          var v = [bigPart.slice(0, _i), bigPart.slice(_i, bigPart.length)];
           p1.length > 1 ? v.push(p2) : v.unshift(p1);
           variants.push(v);
         }
