@@ -1,6 +1,6 @@
 {
   "name": "imagallery",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Just a nice way to represent you pictures",
   "main": "build/imagallery.min.js",
   "scripts": {
