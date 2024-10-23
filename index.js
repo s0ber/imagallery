@@ -27,8 +27,8 @@ const renderPreviews = ($container, images) => {
 
   const { previews, aspectRatio, direction, diff } = Imagallery(images)
 
-  console.log(aspectRatio)
-  console.log(direction)
+  // console.log(aspectRatio)
+  // console.log(direction)
 
   if (diff) {
     OPTIMAL_NUMS++
