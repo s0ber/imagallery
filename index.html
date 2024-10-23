@@ -14,11 +14,11 @@
 
       .col {
         float: left;
-        width: 20%;
+        width: 14%;
       }
 
       .col + .col {
-        padding-left: 15px;
+        padding-left: 40px;
       }
 
       .preview {
@@ -42,6 +42,7 @@
       .preview-img {
         width: 100%;
         height: 100%;
+        border-radius: 3px;
       }
 
       .wrapper-inner {
@@ -49,10 +50,13 @@
         margin-right: -2.5px;
         margin-top: -2.5px;
         margin-bottom: -2.5px;
+        /* display: flex; */
+        /* flex-direction: column; */
+        /* flex-wrap: wrap; */
       }
 
       .wrapper + .wrapper {
-        padding-top: 15px;
+        padding-top: 40px;
       }
 
       .wrapper-inner:before,
@@ -67,7 +71,7 @@
     </style>
   </head>
   <body>
-    <script src='build/imagallery.min.js' ></script>
+    <script src='build/imagallery.js' ></script>
     <script src='index.js' ></script>
   </body>
 </html>
