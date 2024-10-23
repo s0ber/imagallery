@@ -83,52 +83,68 @@ return /******/ (function(modules) { // webpackBootstrap
 "use strict";
 
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var MOBILE_SINGLE_PREVIEW_RATIO = 0.666;
-var DESKTOP_SINGLE_PREVIEW_RATIO = 1;
+var SINGLE_PREVIEW_RATIO = 1;
 
-var MOBILE_TARGET_RATIO = 0.66;
-var DESKTOP_TARGET_RATIO = 1.5;
+var MAX_IMAGES = 25;
 
-var MAX_VERTICAL_IMAGE_RATIO = 0.7;
-
-var getRatio = function getRatio(image) {
+var sum = function sum(arr) {
+  return arr.reduce(function (a, b) {
+    return a + b;
+  }, 0);
+};
+var clamp = function clamp(num, min, max) {
+  return Math.min(max, Math.max(min, num));
+};
+var lerp = function lerp(a, b, alpha) {
+  return a + alpha * (b - a);
+};
+var aspectRatio = function aspectRatio(image) {
   return image.width / image.height;
 };
+var getAverageRatio = function getAverageRatio(images) {
+  return images.map(aspectRatio).reduce(function (result, ratio) {
+    return ratio + result;
+  }, 1) / images.length;
+};
 
-var applyScale = function applyScale(image, scale) {
-  var width = image.width,
-      height = image.height;
+// inspired by https://github.com/Ajaxy/telegram-tt/blob/master/src/components/middle/message/helpers/calculateAlbumLayout.ts
+var cropImages = function cropImages(images, averageRatio) {
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
 
-  image.width *= scale;
-  image.height *= scale;
-  if (image.images) {
-    var _iteratorNormalCompletion = true;
-    var _didIteratorError = false;
-    var _iteratorError = undefined;
+  try {
+    for (var _iterator = images[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var image = _step.value;
 
+      var ratio = aspectRatio(image);
+      var clampedRatio = averageRatio > 1.1 ? clamp(ratio, 1, 2.75) : clamp(ratio, 0.6667, 1);
+
+      image.height = image.width / clampedRatio;
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
     try {
-      for (var _iterator = image.images[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-        var _image = _step.value;
-
-        applyScale(_image, scale);
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
       }
-    } catch (err) {
-      _didIteratorError = true;
-      _iteratorError = err;
     } finally {
-      try {
-        if (!_iteratorNormalCompletion && _iterator.return) {
-          _iterator.return();
-        }
-      } finally {
-        if (_didIteratorError) {
-          throw _iteratorError;
-        }
+      if (_didIteratorError) {
+        throw _iteratorError;
       }
     }
   }
+};
+
+var applyScale = function applyScale(image, scale) {
+  image.width *= scale;
+  image.height *= scale;
   return image;
 };
 
@@ -167,155 +183,211 @@ var copyImages = function copyImages(images) {
 
 // scales images in a list in a way that they are fit into a single row
 var prepareRow = function prepareRow(images) {
-  var rowHeight = 100 / images.map(function (image) {
-    return getRatio(image);
-  }).reduce(function (a, b) {
-    return a + b;
-  }, 0);
-
+  var rowHeight = 100 / sum(images.map(aspectRatio));
   var row = { width: 100, height: rowHeight };
 
   row.images = images.map(function (image) {
-    var ratio = getRatio(image);
-    image.width = row.height * ratio;
-    image.height = row.height;
-
-    if (image.images) {
-      scaleImagesToWidth(image.images, image.width);
-    }
-    return image;
+    return scaleImageToHeight(image, row.height);
   });
+  row.ratio = aspectRatio(row);
 
-  row.ratio = getRatio(row);
   return row;
 };
 
 var prepareCol = function prepareCol(images) {
-  var colWidth = 100 / images.map(function (image) {
-    return 1 / getRatio(image);
-  }).reduce(function (a, b) {
-    return a + b;
-  }, 0);
-
+  var colWidth = 100 / sum(images.map(function (image) {
+    return 1 / aspectRatio(image);
+  }));
   var col = { width: colWidth, height: 100 };
 
   col.images = images.map(function (image) {
-    var ratio = getRatio(image);
-    image.width = col.width;
-    image.height = col.width / ratio;
-
-    if (image.images) {
-      scaleImagesToHeight(image.images, image.height);
-    }
-    return image;
+    return scaleImageToWidth(image, col.width);
   });
+  col.ratio = aspectRatio(col);
 
-  col.ratio = getRatio(col);
   return col;
 };
 
-var scaleImagesToWidth = function scaleImagesToWidth(images, width) {
-  var _iteratorNormalCompletion3 = true;
-  var _didIteratorError3 = false;
-  var _iteratorError3 = undefined;
+var scaleImageToWidth = function scaleImageToWidth(image, width) {
+  var ratio = aspectRatio(image);
+  image.width = width;
+  image.height = width / ratio;
 
-  try {
-    for (var _iterator3 = images[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-      var image = _step3.value;
+  if (image.images) {
+    var _iteratorNormalCompletion3 = true;
+    var _didIteratorError3 = false;
+    var _iteratorError3 = undefined;
 
-      var ratio = getRatio(image);
-      image.width = width;
-      image.height = width / ratio;
-    }
-  } catch (err) {
-    _didIteratorError3 = true;
-    _iteratorError3 = err;
-  } finally {
     try {
-      if (!_iteratorNormalCompletion3 && _iterator3.return) {
-        _iterator3.return();
+      for (var _iterator3 = image.images[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+        var nestedImage = _step3.value;
+
+        scaleImageToHeight(nestedImage, image.height);
       }
+    } catch (err) {
+      _didIteratorError3 = true;
+      _iteratorError3 = err;
     } finally {
-      if (_didIteratorError3) {
-        throw _iteratorError3;
+      try {
+        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+          _iterator3.return();
+        }
+      } finally {
+        if (_didIteratorError3) {
+          throw _iteratorError3;
+        }
       }
     }
   }
+
+  return image;
 };
 
-var scaleImagesToHeight = function scaleImagesToHeight(images, height) {
-  var _iteratorNormalCompletion4 = true;
-  var _didIteratorError4 = false;
-  var _iteratorError4 = undefined;
+var scaleImageToHeight = function scaleImageToHeight(image, height) {
+  var ratio = aspectRatio(image);
+  image.width = height * ratio;
+  image.height = height;
 
-  try {
-    for (var _iterator4 = images[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-      var image = _step4.value;
+  if (image.images) {
+    var _iteratorNormalCompletion4 = true;
+    var _didIteratorError4 = false;
+    var _iteratorError4 = undefined;
 
-      var ratio = getRatio(image);
-      image.width = height * ratio;
-      image.height = height;
-    }
-  } catch (err) {
-    _didIteratorError4 = true;
-    _iteratorError4 = err;
-  } finally {
     try {
-      if (!_iteratorNormalCompletion4 && _iterator4.return) {
-        _iterator4.return();
+      for (var _iterator4 = image.images[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+        var nestedImage = _step4.value;
+
+        scaleImageToWidth(nestedImage, image.width);
       }
+    } catch (err) {
+      _didIteratorError4 = true;
+      _iteratorError4 = err;
     } finally {
-      if (_didIteratorError4) {
-        throw _iteratorError4;
+      try {
+        if (!_iteratorNormalCompletion4 && _iterator4.return) {
+          _iterator4.return();
+        }
+      } finally {
+        if (_didIteratorError4) {
+          throw _iteratorError4;
+        }
       }
     }
   }
+
+  return image;
 };
 
-var prepareChunkVariations = function prepareChunkVariations(images, maxChunks) {
+var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref) {
+  var averageRatio = _ref.averageRatio;
+
   var variants = [];
-  if (maxChunks >= 1) variants.push([images]);
+  if (maxRows >= 1) variants.push([images]);
 
-  if (maxChunks >= 2) {
-    for (var i = 0; i < images.length; i++) {
-      if (i === 0) continue;
+  if (maxRows >= 2) {
+    var MAX_ITEMS_IN_ROW_1 = 3;
+
+    for (var i = 1; i < MAX_ITEMS_IN_ROW_1 + 1; i++) {
       variants.push([images.slice(0, i), images.slice(i, images.length)]);
     }
   }
 
-  if (maxChunks === 3) {
-    var _iteratorNormalCompletion5 = true;
-    var _didIteratorError5 = false;
-    var _iteratorError5 = undefined;
+  if (maxRows >= 3) {
+    var _arr = [].concat(variants);
 
-    try {
-      for (var _iterator5 = variants[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-        var _step5$value = _slicedToArray(_step5.value, 2),
-            p1 = _step5$value[0],
-            p2 = _step5$value[1];
+    for (var _i = 0; _i < _arr.length; _i++) {
+      var _arr$_i = _slicedToArray(_arr[_i], 2),
+          p1 = _arr$_i[0],
+          p2 = _arr$_i[1];
 
-        if (!p1 || !p2) continue;
-        var bigPart = p1.length > 1 ? p1 : p2;
+      if (!p1 || !p2) continue;
 
-        for (var _i = 0; _i < bigPart.length; _i++) {
-          if (_i === 0) continue;
-          var v = [bigPart.slice(0, _i), bigPart.slice(_i, bigPart.length)];
-          p1.length > 1 ? v.push(p2) : v.unshift(p1);
-          variants.push(v);
-        }
+      var MAX_ITEMS_IN_ROW_2 = averageRatio < 0.85 ? 4 : 3;
+
+      for (var _i2 = 1; _i2 < MAX_ITEMS_IN_ROW_2 + 1; _i2++) {
+        variants.push([p1, p2.slice(0, _i2), p2.slice(_i2, p2.length)]);
       }
-    } catch (err) {
-      _didIteratorError5 = true;
-      _iteratorError5 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion5 && _iterator5.return) {
-          _iterator5.return();
-        }
-      } finally {
-        if (_didIteratorError5) {
-          throw _iteratorError5;
-        }
+    }
+  }
+
+  if (maxRows >= 4) {
+    var _arr2 = [].concat(variants);
+
+    for (var _i3 = 0; _i3 < _arr2.length; _i3++) {
+      var _arr2$_i = _slicedToArray(_arr2[_i3], 3),
+          p1 = _arr2$_i[0],
+          p2 = _arr2$_i[1],
+          p3 = _arr2$_i[2];
+
+      if (!p1 || !p2 || !p3) continue;
+
+      var MAX_ITEMS_IN_ROW_3 = 3;
+
+      for (var _i4 = 1; _i4 < MAX_ITEMS_IN_ROW_3 + 1; _i4++) {
+        variants.push([p1, p2, p3.slice(0, _i4), p3.slice(_i4, p3.length)]);
+      }
+    }
+  }
+
+  if (maxRows >= 5) {
+    var _arr3 = [].concat(variants);
+
+    for (var _i5 = 0; _i5 < _arr3.length; _i5++) {
+      var _arr3$_i = _slicedToArray(_arr3[_i5], 4),
+          p1 = _arr3$_i[0],
+          p2 = _arr3$_i[1],
+          p3 = _arr3$_i[2],
+          p4 = _arr3$_i[3];
+
+      if (!p1 || !p2 || !p3 || !p4) continue;
+
+      var MAX_ITEMS_IN_ROW_4 = 4;
+
+      for (var _i6 = 1; _i6 < MAX_ITEMS_IN_ROW_4 + 1; _i6++) {
+        variants.push([p1, p2, p3, p4.slice(0, _i6), p4.slice(_i6, p4.length)]);
+      }
+    }
+  }
+
+  if (maxRows >= 6) {
+    var _arr4 = [].concat(variants);
+
+    for (var _i7 = 0; _i7 < _arr4.length; _i7++) {
+      var _arr4$_i = _slicedToArray(_arr4[_i7], 5),
+          p1 = _arr4$_i[0],
+          p2 = _arr4$_i[1],
+          p3 = _arr4$_i[2],
+          p4 = _arr4$_i[3],
+          p5 = _arr4$_i[4];
+
+      if (!p1 || !p2 || !p3 || !p4 || !p5) continue;
+
+      var MAX_ITEMS_IN_ROW_5 = 4;
+
+      for (var _i8 = 1; _i8 < MAX_ITEMS_IN_ROW_5 + 1; _i8++) {
+        variants.push([p1, p2, p3, p4, p5.slice(0, _i8), p5.slice(_i8, p5.length)]);
+      }
+    }
+  }
+
+  if (maxRows >= 7) {
+    var _arr5 = [].concat(variants);
+
+    for (var _i9 = 0; _i9 < _arr5.length; _i9++) {
+      var _arr5$_i = _slicedToArray(_arr5[_i9], 6),
+          p1 = _arr5$_i[0],
+          p2 = _arr5$_i[1],
+          p3 = _arr5$_i[2],
+          p4 = _arr5$_i[3],
+          p5 = _arr5$_i[4],
+          p6 = _arr5$_i[5];
+
+      if (!p1 || !p2 || !p3 || !p4 || !p5 || !p6) continue;
+
+      var MAX_ITEMS_IN_ROW_6 = 3;
+
+      for (var _i10 = 1; _i10 < MAX_ITEMS_IN_ROW_6; _i10++) {
+        variants.push([p1, p2, p3, p4, p5, p6.slice(0, _i10), p6.slice(_i10, p6.length)]);
       }
     }
   }
@@ -323,18 +395,29 @@ var prepareChunkVariations = function prepareChunkVariations(images, maxChunks) 
   return variants;
 };
 
-var prepareVariants = function prepareVariants(images) {
+var prepareVariants = function prepareVariants(images, options) {
   var variants = [];
-  var isSmallGroup = images.length === 3 || images.length === 4;
-  var variations = prepareChunkVariations(images, isSmallGroup ? 2 : 3);
+  var isSmallGroup = images.length <= 4;
 
-  var _iteratorNormalCompletion6 = true;
-  var _didIteratorError6 = false;
-  var _iteratorError6 = undefined;
+  var maxRows = function () {
+    if (isSmallGroup) return 2;
+    if (images.length <= 8) return 3;
+    if (images.length <= 12) return 4;
+    if (images.length <= 16) return 5;
+    if (images.length <= 18) return 6;
+
+    return 7;
+  }();
+
+  var variations = prepareRowsVariations(images, maxRows, options);
+
+  var _iteratorNormalCompletion5 = true;
+  var _didIteratorError5 = false;
+  var _iteratorError5 = undefined;
 
   try {
-    for (var _iterator6 = variations[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-      var v = _step6.value;
+    for (var _iterator5 = variations[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+      var v = _step5.value;
 
       if (v.length === 1) {
         variants.push({ singleRow: v[0] });
@@ -346,16 +429,16 @@ var prepareVariants = function prepareVariants(images) {
       }
     }
   } catch (err) {
-    _didIteratorError6 = true;
-    _iteratorError6 = err;
+    _didIteratorError5 = true;
+    _iteratorError5 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion6 && _iterator6.return) {
-        _iterator6.return();
+      if (!_iteratorNormalCompletion5 && _iterator5.return) {
+        _iterator5.return();
       }
     } finally {
-      if (_didIteratorError6) {
-        throw _iteratorError6;
+      if (_didIteratorError5) {
+        throw _iteratorError5;
       }
     }
   }
@@ -363,75 +446,192 @@ var prepareVariants = function prepareVariants(images) {
   return variants;
 };
 
+// this function will scale all nested images according to calculated aspect ratios
+var getPreviews = function getPreviews(variant, mosaicShape) {
+  var previews = [];
+  if (variant.cols) {
+    var _iteratorNormalCompletion6 = true;
+    var _didIteratorError6 = false;
+    var _iteratorError6 = undefined;
+
+    try {
+      for (var _iterator6 = mosaicShape.images[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+        var col = _step6.value;
+        var _iteratorNormalCompletion7 = true;
+        var _didIteratorError7 = false;
+        var _iteratorError7 = undefined;
+
+        try {
+          for (var _iterator7 = col.images[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+            var nestedImage = _step7.value;
+
+            previews.push(_extends({}, nestedImage));
+          }
+        } catch (err) {
+          _didIteratorError7 = true;
+          _iteratorError7 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+              _iterator7.return();
+            }
+          } finally {
+            if (_didIteratorError7) {
+              throw _iteratorError7;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      _didIteratorError6 = true;
+      _iteratorError6 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion6 && _iterator6.return) {
+          _iterator6.return();
+        }
+      } finally {
+        if (_didIteratorError6) {
+          throw _iteratorError6;
+        }
+      }
+    }
+  } else if (variant.rows) {
+    // we need to wrap in additional row for auto-scaling to work properly
+    scaleImageToWidth(_extends({}, mosaicShape, { images: [mosaicShape] }), 100);
+    var _iteratorNormalCompletion8 = true;
+    var _didIteratorError8 = false;
+    var _iteratorError8 = undefined;
+
+    try {
+      for (var _iterator8 = mosaicShape.images[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+        var row = _step8.value;
+        var _iteratorNormalCompletion9 = true;
+        var _didIteratorError9 = false;
+        var _iteratorError9 = undefined;
+
+        try {
+          for (var _iterator9 = row.images[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+            var _nestedImage = _step9.value;
+
+            previews.push(_extends({}, _nestedImage));
+          }
+        } catch (err) {
+          _didIteratorError9 = true;
+          _iteratorError9 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion9 && _iterator9.return) {
+              _iterator9.return();
+            }
+          } finally {
+            if (_didIteratorError9) {
+              throw _iteratorError9;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      _didIteratorError8 = true;
+      _iteratorError8 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion8 && _iterator8.return) {
+          _iterator8.return();
+        }
+      } finally {
+        if (_didIteratorError8) {
+          throw _iteratorError8;
+        }
+      }
+    }
+  }
+  return previews;
+};
+
 var getOptimalVariant = function getOptimalVariant(images, options) {
-  var variants = prepareVariants(images);
+  var variants = prepareVariants(images, options);
   var optimalVariant = void 0;
   var optimalRatio = void 0;
-  var targetRatio = options.type == 'desktop' ? DESKTOP_TARGET_RATIO : MOBILE_TARGET_RATIO;
+  var optimalPreviews = void 0;
 
-  var _iteratorNormalCompletion7 = true;
-  var _didIteratorError7 = false;
-  var _iteratorError7 = undefined;
+  // all values here are hand-adjusted to get the minimum amount of produced small images
+  var targetRatio = lerp(1.5, .47, images.length / MAX_IMAGES);
+
+  var _iteratorNormalCompletion10 = true;
+  var _didIteratorError10 = false;
+  var _iteratorError10 = undefined;
 
   try {
-    for (var _iterator7 = variants[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-      var variant = _step7.value;
+    for (var _iterator10 = variants[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+      var variant = _step10.value;
 
-      var mosaicShape = void 0;
+      var mosaicShape = variant.singleRow ? prepareRow(variant.singleRow) : variant.cols ? prepareRow(variant.cols.map(prepareCol)) : prepareCol(variant.rows.map(prepareRow));
 
-      if (variant.singleRow) {
-        mosaicShape = prepareRow(variant.singleRow);
-      } else if (variant.rows) {
-        var rows = variant.rows.map(function (row) {
-          return prepareRow(row);
-        });
-        mosaicShape = prepareCol(rows);
-      } else if (variant.cols) {
-        var cols = variant.cols.map(function (col) {
-          return prepareCol(col);
-        });
-        mosaicShape = prepareRow(cols);
+      var ratio = aspectRatio(mosaicShape);
+      var previews = getPreviews(variant, mosaicShape);
+
+      // penalize current variant for every small image
+      var _iteratorNormalCompletion11 = true;
+      var _didIteratorError11 = false;
+      var _iteratorError11 = undefined;
+
+      try {
+        for (var _iterator11 = previews.filter(function (p) {
+          return p.width <= 20 || p.height <= 20;
+        })[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+          var _badPreview = _step11.value;
+
+          ratio > targetRatio ? ratio *= 1.3 : ratio /= 1.3;
+        }
+      } catch (err) {
+        _didIteratorError11 = true;
+        _iteratorError11 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion11 && _iterator11.return) {
+            _iterator11.return();
+          }
+        } finally {
+          if (_didIteratorError11) {
+            throw _iteratorError11;
+          }
+        }
       }
 
-      var ratio = getRatio(mosaicShape);
       if (optimalVariant) {
         if (Math.abs(ratio - targetRatio) < Math.abs(optimalRatio - targetRatio)) {
           optimalRatio = ratio;
           optimalVariant = variant;
+          optimalPreviews = previews;
         }
       } else {
         optimalRatio = ratio;
         optimalVariant = variant;
+        optimalPreviews = previews;
       }
     }
   } catch (err) {
-    _didIteratorError7 = true;
-    _iteratorError7 = err;
+    _didIteratorError10 = true;
+    _iteratorError10 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion7 && _iterator7.return) {
-        _iterator7.return();
+      if (!_iteratorNormalCompletion10 && _iterator10.return) {
+        _iterator10.return();
       }
     } finally {
-      if (_didIteratorError7) {
-        throw _iteratorError7;
+      if (_didIteratorError10) {
+        throw _iteratorError10;
       }
     }
   }
 
-  return optimalVariant;
+  return { variant: optimalVariant, previews: optimalPreviews, aspectRatio: optimalRatio, diff: Math.abs(optimalRatio - targetRatio) };
 };
 
-var preparePreview = function preparePreview(image, _ref) {
-  var width = _ref.width,
-      height = _ref.height;
-
-  return { color: image.color, width: width, height: height };
-};
-
-var singlePreview = function singlePreview(images, options) {
+var singlePreview = function singlePreview(images) {
   var image = images[0];
-  var targetRatio = options.type == 'desktop' ? DESKTOP_SINGLE_PREVIEW_RATIO : MOBILE_SINGLE_PREVIEW_RATIO;
+  var targetRatio = SINGLE_PREVIEW_RATIO;
   var scaleTo = {
     width: 100,
     height: 100 / targetRatio
@@ -439,182 +639,97 @@ var singlePreview = function singlePreview(images, options) {
   var scale = Math.min(scaleTo.width / image.width, scaleTo.height / image.height);
   var preview = applyScale(image, scale);
 
-  return [preview];
+  return { previews: [preview], aspectRatio: image.width / image.height, direction: 'row' };
 };
 
-var twoImgPreviews = function twoImgPreviews(images, options) {
+var twoImgPreviews = function twoImgPreviews(images) {
   var previews = [];
   var row = prepareRow(images);
 
-  var _iteratorNormalCompletion8 = true;
-  var _didIteratorError8 = false;
-  var _iteratorError8 = undefined;
+  var _iteratorNormalCompletion12 = true;
+  var _didIteratorError12 = false;
+  var _iteratorError12 = undefined;
 
   try {
-    for (var _iterator8 = row.images[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-      var image = _step8.value;
+    for (var _iterator12 = row.images[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+      var image = _step12.value;
 
       previews.push(image);
     }
   } catch (err) {
-    _didIteratorError8 = true;
-    _iteratorError8 = err;
+    _didIteratorError12 = true;
+    _iteratorError12 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion8 && _iterator8.return) {
-        _iterator8.return();
+      if (!_iteratorNormalCompletion12 && _iterator12.return) {
+        _iterator12.return();
       }
     } finally {
-      if (_didIteratorError8) {
-        throw _iteratorError8;
+      if (_didIteratorError12) {
+        throw _iteratorError12;
       }
     }
   }
 
-  return previews;
+  return { previews: previews, aspectRatio: row.ratio, direction: 'row' };
 };
 
 var manyImgPreviews = function manyImgPreviews(images, options) {
-  var previews = [];
-  var variant = getOptimalVariant(images, options);
+  var direction = void 0;
+
+  var _getOptimalVariant = getOptimalVariant(images, options),
+      variant = _getOptimalVariant.variant,
+      previews = _getOptimalVariant.previews,
+      diff = _getOptimalVariant.diff,
+      aspectRatio = _getOptimalVariant.aspectRatio;
 
   if (variant.singleRow) {
-    var row = prepareRow(variant.singleRow, true);
-    var _iteratorNormalCompletion9 = true;
-    var _didIteratorError9 = false;
-    var _iteratorError9 = undefined;
-
-    try {
-      for (var _iterator9 = row.images[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-        var image = _step9.value;
-
-        previews.push(image);
-      }
-    } catch (err) {
-      _didIteratorError9 = true;
-      _iteratorError9 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion9 && _iterator9.return) {
-          _iterator9.return();
-        }
-      } finally {
-        if (_didIteratorError9) {
-          throw _iteratorError9;
-        }
-      }
-    }
+    direction = 'row';
   } else if (variant.cols) {
-    var cols = variant.cols.map(function (col) {
-      return prepareCol(col);
-    });
-    var _row = prepareRow(cols);
-
-    var _iteratorNormalCompletion10 = true;
-    var _didIteratorError10 = false;
-    var _iteratorError10 = undefined;
-
-    try {
-      for (var _iterator10 = _row.images[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-        var col = _step10.value;
-        var _iteratorNormalCompletion11 = true;
-        var _didIteratorError11 = false;
-        var _iteratorError11 = undefined;
-
-        try {
-          for (var _iterator11 = col.images[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-            var nestedImage = _step11.value;
-
-            previews.push(nestedImage);
-          }
-        } catch (err) {
-          _didIteratorError11 = true;
-          _iteratorError11 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion11 && _iterator11.return) {
-              _iterator11.return();
-            }
-          } finally {
-            if (_didIteratorError11) {
-              throw _iteratorError11;
-            }
-          }
-        }
-      }
-    } catch (err) {
-      _didIteratorError10 = true;
-      _iteratorError10 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion10 && _iterator10.return) {
-          _iterator10.return();
-        }
-      } finally {
-        if (_didIteratorError10) {
-          throw _iteratorError10;
-        }
-      }
-    }
+    direction = 'column';
   } else if (variant.rows) {
-    var rows = variant.rows.map(function (row) {
-      return prepareRow(row);
-    });
-    var _col = prepareCol(rows);
-    var scale = 100 / _col.width;
+    direction = 'row';
+  }
 
-    var _iteratorNormalCompletion12 = true;
-    var _didIteratorError12 = false;
-    var _iteratorError12 = undefined;
+  return {
+    aspectRatio: aspectRatio,
+    previews: previews,
+    direction: direction,
+    diff: diff
+  };
+};
 
+var MAX_VERTICAL_IMAGE_RATIO = 0.56;
+var fixVerticalImages = function fixVerticalImages(images) {
+  var _iteratorNormalCompletion13 = true;
+  var _didIteratorError13 = false;
+  var _iteratorError13 = undefined;
+
+  try {
+    for (var _iterator13 = images[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+      var image = _step13.value;
+
+      if (aspectRatio(image) >= MAX_VERTICAL_IMAGE_RATIO) continue;
+      image.height = image.width / MAX_VERTICAL_IMAGE_RATIO;
+    }
+  } catch (err) {
+    _didIteratorError13 = true;
+    _iteratorError13 = err;
+  } finally {
     try {
-      for (var _iterator12 = _col.images[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-        var _row2 = _step12.value;
-        var _iteratorNormalCompletion13 = true;
-        var _didIteratorError13 = false;
-        var _iteratorError13 = undefined;
-
-        try {
-          for (var _iterator13 = _row2.images[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-            var _nestedImage = _step13.value;
-
-            previews.push(applyScale(_nestedImage, scale));
-          }
-        } catch (err) {
-          _didIteratorError13 = true;
-          _iteratorError13 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion13 && _iterator13.return) {
-              _iterator13.return();
-            }
-          } finally {
-            if (_didIteratorError13) {
-              throw _iteratorError13;
-            }
-          }
-        }
+      if (!_iteratorNormalCompletion13 && _iterator13.return) {
+        _iterator13.return();
       }
-    } catch (err) {
-      _didIteratorError12 = true;
-      _iteratorError12 = err;
     } finally {
-      try {
-        if (!_iteratorNormalCompletion12 && _iterator12.return) {
-          _iterator12.return();
-        }
-      } finally {
-        if (_didIteratorError12) {
-          throw _iteratorError12;
-        }
+      if (_didIteratorError13) {
+        throw _iteratorError13;
       }
     }
   }
-
-  return previews;
 };
 
-var fixVerticalImages = function fixVerticalImages(images) {
+var MIN_HORIZONTAL_IMAGE_RATIO = 1.77;
+var fixHorizontalImages = function fixHorizontalImages(images) {
   var _iteratorNormalCompletion14 = true;
   var _didIteratorError14 = false;
   var _iteratorError14 = undefined;
@@ -623,8 +738,8 @@ var fixVerticalImages = function fixVerticalImages(images) {
     for (var _iterator14 = images[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
       var image = _step14.value;
 
-      if (getRatio(image) >= MAX_VERTICAL_IMAGE_RATIO) continue;
-      image.height = image.width / MAX_VERTICAL_IMAGE_RATIO;
+      if (aspectRatio(image) <= MIN_HORIZONTAL_IMAGE_RATIO) continue;
+      image.width = image.height * MIN_HORIZONTAL_IMAGE_RATIO;
     }
   } catch (err) {
     _didIteratorError14 = true;
@@ -645,19 +760,29 @@ var fixVerticalImages = function fixVerticalImages(images) {
 module.exports = function (images) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { type: 'desktop' };
 
-  var processorFn = void 0;
+  var processorFn = function processorFn(images, _options) {
+    return images;
+  };
   images = copyImages(images); // don't touch original images
 
-  fixVerticalImages(images);
-
   if (images.length === 1) {
+    fixVerticalImages(images);
+    fixHorizontalImages(images);
     processorFn = singlePreview;
   } else if (images.length === 2) {
+    fixVerticalImages(images);
+    fixHorizontalImages(images);
     processorFn = twoImgPreviews;
-  } else if (images.length > 2) {
+  } else if (images.length > 2 && images.length <= 4) {
+    fixVerticalImages(images);
+    fixHorizontalImages(images);
     processorFn = manyImgPreviews;
-  } else {
-    processorFn = function processorFn() {};
+  } else if (images.length > 4) {
+    var averageRatio = getAverageRatio(images);
+    options = _extends({}, options, { averageRatio: averageRatio });
+
+    cropImages(images, averageRatio);
+    processorFn = manyImgPreviews;
   }
 
   return processorFn(images, options);

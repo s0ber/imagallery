@@ -1,28 +1,30 @@
-const MOBILE_SINGLE_PREVIEW_RATIO = 0.666
-const DESKTOP_SINGLE_PREVIEW_RATIO = 1
+const SINGLE_PREVIEW_RATIO = 1
 
-const MOBILE_TARGET_RATIO = 0.66
-const DESKTOP_TARGET_RATIO = 1.5
+const MAX_IMAGES = 25
 
-const MAX_VERTICAL_IMAGE_RATIO = 0.7
+const sum = arr => arr.reduce((a, b) => a + b, 0)
+const clamp = (num, min, max) => (Math.min(max, Math.max(min, num)))
+const lerp = (a, b, alpha) => a + alpha * ( b - a )
+const aspectRatio = image => image.width / image.height
+const getAverageRatio = images => images.map(aspectRatio).reduce((result, ratio) => ratio + result, 1) / images.length
 
-const getRatio = (image) => {
-  return image.width / image.height
+// inspired by https://github.com/Ajaxy/telegram-tt/blob/master/src/components/middle/message/helpers/calculateAlbumLayout.ts
+const cropImages = (images, averageRatio) => {
+  for (let image of images) {
+    const ratio = aspectRatio(image)
+    const clampedRatio = averageRatio > 1.1 ? clamp(ratio, 1, 2.75) : clamp(ratio, 0.6667, 1)
+
+    image.height = image.width / clampedRatio
+  }
 }
 
 const applyScale = (image, scale) => {
-  const {width, height} = image
   image.width *= scale
   image.height *= scale
-  if (image.images) {
-    for (let image of image.images) {
-      applyScale(image, scale)
-    }
-  }
   return image
 }
 
-const copyImages = (images) => {
+const copyImages = images => {
   const newImages = []
   for (let image of images) {
     let newImg = JSON.parse(JSON.stringify(image))
@@ -33,99 +35,146 @@ const copyImages = (images) => {
   return newImages
 }
 
+
 // scales images in a list in a way that they are fit into a single row
-const prepareRow = (images) => {
-  const rowHeight = 100 / images.map((image) => {
-    return getRatio(image)
-  }).reduce((a, b) => { return a + b }, 0)
+const prepareRow = images => {
+  const rowHeight = 100 / sum(images.map(aspectRatio))
+  let row = { width: 100, height: rowHeight }
 
-  let row = {width: 100, height: rowHeight}
+  row.images = images.map(image => scaleImageToHeight(image, row.height))
+  row.ratio = aspectRatio(row)
 
-  row.images = images.map((image) => {
-    const ratio = getRatio(image)
-    image.width = row.height * ratio
-    image.height = row.height
-
-    if (image.images) {
-      scaleImagesToWidth(image.images, image.width)
-    }
-    return image
-  })
-
-  row.ratio = getRatio(row)
   return row
 }
 
-const prepareCol = (images) => {
-  const colWidth = 100 / images.map((image) => {
-    return 1 / getRatio(image)
-  }).reduce((a, b) => { return a + b }, 0)
+const prepareCol = images => {
+  const colWidth = 100 / sum(images.map(image => 1 / aspectRatio(image)))
+  const col = { width: colWidth, height: 100 }
 
-  const col = {width: colWidth, height: 100}
+  col.images = images.map(image => scaleImageToWidth(image, col.width))
+  col.ratio = aspectRatio(col)
 
-  col.images = images.map((image) => {
-    const ratio = getRatio(image)
-    image.width = col.width
-    image.height = col.width / ratio
-
-    if (image.images) {
-      scaleImagesToHeight(image.images, image.height)
-    }
-    return image
-  })
-
-  col.ratio = getRatio(col)
   return col
 }
 
-const scaleImagesToWidth = (images, width) => {
-  for (let image of images) {
-    let ratio = getRatio(image)
-    image.width = width
-    image.height = width / ratio
+const scaleImageToWidth = (image, width) => {
+  let ratio = aspectRatio(image)
+  image.width = width
+  image.height = width / ratio
+
+  if (image.images) {
+    for (let nestedImage of image.images) {
+      scaleImageToHeight(nestedImage, image.height)
+    }
   }
+
+  return image
 }
 
-const scaleImagesToHeight = (images, height) => {
-  for (let image of images) {
-    let ratio = getRatio(image)
-    image.width = height * ratio
-    image.height = height
+const scaleImageToHeight = (image, height) => {
+  let ratio = aspectRatio(image)
+  image.width = height * ratio
+  image.height = height
+
+  if (image.images) {
+    for (let nestedImage of image.images) {
+      scaleImageToWidth(nestedImage, image.width)
+    }
   }
+
+  return image
 }
 
-const prepareChunkVariations = (images, maxChunks) => {
+const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
   const variants = []
-  if (maxChunks >= 1) variants.push([images])
+  if (maxRows >= 1) variants.push([images])
 
-  if (maxChunks >= 2) {
-    for (let i = 0; i < images.length; i++) {
-      if (i === 0) continue
+  if (maxRows >= 2) {
+    const MAX_ITEMS_IN_ROW_1 = 3
+
+    for (let i = 1; i < MAX_ITEMS_IN_ROW_1 + 1; i++) {
       variants.push([images.slice(0, i), images.slice(i, images.length)])
     }
   }
 
-  if (maxChunks === 3) {
-    const moreVariants = []
-    for (let [p1, p2] of variants) {
+  if (maxRows >= 3) {
+    for (let [p1, p2] of [...variants]) {
       if (!p1 || !p2) continue
 
-      for (let i = 0; i < p2.length; i++) {
-        if (i === 0) continue
-        let v = [p1, p2.slice(0, i), p2.slice(i, p2.length)]
-        moreVariants.push(v)
+      const MAX_ITEMS_IN_ROW_2 = averageRatio < 0.85 ? 4 : 3
+
+      for (let i = 1; i < MAX_ITEMS_IN_ROW_2 + 1; i++) {
+        variants.push([p1, p2.slice(0, i), p2.slice(i, p2.length)])
       }
     }
-    for (let v of moreVariants) { variants.push(v) }
+  }
+
+  if (maxRows >= 4) {
+    for (let [p1, p2, p3] of [...variants]) {
+      if (!p1 || !p2 || !p3) continue
+
+      const MAX_ITEMS_IN_ROW_3 = 3
+
+      for (let i = 1; i < MAX_ITEMS_IN_ROW_3 + 1; i++) {
+        variants.push([p1, p2, p3.slice(0, i), p3.slice(i, p3.length)])
+      }
+    }
+  }
+
+  if (maxRows >= 5) {
+    for (let [p1, p2, p3, p4] of [...variants]) {
+      if (!p1 || !p2 || !p3 || !p4) continue
+
+      const MAX_ITEMS_IN_ROW_4 = 4
+
+      for (let i = 1; i < MAX_ITEMS_IN_ROW_4 + 1; i++) {
+        variants.push([p1, p2, p3, p4.slice(0, i), p4.slice(i, p4.length)])
+      }
+    }
+  }
+
+  if (maxRows >= 6) {
+    for (let [p1, p2, p3, p4, p5] of [...variants]) {
+      if (!p1 || !p2 || !p3 || !p4 || !p5) continue
+
+      const MAX_ITEMS_IN_ROW_5 = 4
+
+      for (let i = 1; i < MAX_ITEMS_IN_ROW_5 + 1; i++) {
+        variants.push([p1, p2, p3, p4, p5.slice(0, i), p5.slice(i, p5.length)])
+      }
+    }
+  }
+
+  if (maxRows >= 7) {
+    for (let [p1, p2, p3, p4, p5, p6] of [...variants]) {
+      if (!p1 || !p2 || !p3 || !p4 || !p5 || !p6) continue
+
+      const MAX_ITEMS_IN_ROW_6 = 3
+
+      for (let i = 1; i < MAX_ITEMS_IN_ROW_6; i++) {
+        variants.push([p1, p2, p3, p4, p5, p6.slice(0, i), p6.slice(i, p6.length)])
+      }
+    }
   }
 
   return variants
 }
 
-const prepareVariants = (images) => {
+const prepareVariants = (images, options) => {
   const variants = []
-  const isSmallGroup = images.length === 3 || images.length === 4
-  const variations = prepareChunkVariations(images, isSmallGroup ? 2 : 3)
+  const isSmallGroup = images.length <= 4
+
+  const maxRows = (() => {
+    if (isSmallGroup) return 2
+    if (images.length <= 8) return 3
+    if (images.length <= 12) return 4
+    if (images.length <= 16) return 5
+    if (images.length <= 18) return 6
+
+    return 7
+  })()
+
+  const variations = prepareRowsVariations(images, maxRows, options)
 
   for (let v of variations) {
     if (v.length === 1) {
@@ -141,47 +190,71 @@ const prepareVariants = (images) => {
   return variants
 }
 
+// this function will scale all nested images according to calculated aspect ratios
+const getPreviews = (variant, mosaicShape) => {
+  const previews = []
+  if (variant.cols) {
+    for (let col of mosaicShape.images) {
+      for (let nestedImage of col.images) {
+        previews.push({ ...nestedImage })
+      }
+    }
+  } else if (variant.rows) {
+    // we need to wrap in additional row for auto-scaling to work properly
+    scaleImageToWidth({ ...mosaicShape, images: [mosaicShape] }, 100)
+    for (let row of mosaicShape.images) {
+      for (let nestedImage of row.images) {
+        previews.push({ ...nestedImage })
+      }
+    }
+  }
+  return previews
+}
+
 const getOptimalVariant = (images, options) => {
-  const variants = prepareVariants(images)
+  const variants = prepareVariants(images, options)
   let optimalVariant
   let optimalRatio
-  let targetRatio = options.type == 'desktop' ? DESKTOP_TARGET_RATIO : MOBILE_TARGET_RATIO
+  let optimalPreviews
+
+  // all values here are hand-adjusted to get the minimum amount of produced small images
+  let targetRatio = lerp(1.5, .47, images.length / MAX_IMAGES)
 
   for (let variant of variants) {
-    let mosaicShape
+    const mosaicShape =
+      variant.singleRow
+        ? prepareRow(variant.singleRow)
+        : variant.cols
+          ? prepareRow(variant.cols.map(prepareCol))
+          : prepareCol(variant.rows.map(prepareRow))
 
-    if (variant.singleRow) {
-      mosaicShape = prepareRow(variant.singleRow)
-    } else if (variant.rows) {
-      const rows = variant.rows.map((row) => { return prepareRow(row) })
-      mosaicShape = prepareCol(rows)
-    } else if (variant.cols) {
-      const cols = variant.cols.map((col) => { return prepareCol(col) })
-      mosaicShape = prepareRow(cols)
+    let ratio = aspectRatio(mosaicShape)
+    const previews = getPreviews(variant, mosaicShape)
+
+    // penalize current variant for every small image
+    for (let _badPreview of previews.filter(p => p.width <= 20 || p.height <= 20)) {
+      ratio > targetRatio ? (ratio *= 1.3) : (ratio /= 1.3)
     }
 
-    const ratio = getRatio(mosaicShape)
     if (optimalVariant) {
       if (Math.abs(ratio - targetRatio) < Math.abs(optimalRatio - targetRatio)) {
         optimalRatio = ratio
         optimalVariant = variant
+        optimalPreviews = previews
       }
     } else {
       optimalRatio = ratio
       optimalVariant = variant
+      optimalPreviews = previews
     }
   }
 
-  return optimalVariant
+  return { variant: optimalVariant, previews: optimalPreviews, aspectRatio: optimalRatio, diff: Math.abs(optimalRatio - targetRatio) }
 }
 
-const preparePreview = (image, {width, height}) => {
-  return {color: image.color, width, height}
-}
-
-const singlePreview = (images, options) => {
+const singlePreview = images => {
   const image = images[0]
-  const targetRatio = options.type == 'desktop' ? DESKTOP_SINGLE_PREVIEW_RATIO : MOBILE_SINGLE_PREVIEW_RATIO
+  const targetRatio = SINGLE_PREVIEW_RATIO
   const scaleTo = {
     width: 100,
     height: 100 / targetRatio
@@ -189,10 +262,10 @@ const singlePreview = (images, options) => {
   const scale = Math.min(scaleTo.width / image.width, scaleTo.height / image.height)
   const preview = applyScale(image, scale)
 
-  return [preview]
+  return { previews: [preview], aspectRatio: image.width / image.height, direction: 'row' }
 }
 
-const twoImgPreviews = (images, options) => {
+const twoImgPreviews = images => {
   const previews = []
   const row = prepareRow(images)
 
@@ -200,63 +273,67 @@ const twoImgPreviews = (images, options) => {
     previews.push(image)
   }
 
-  return previews
+  return { previews, aspectRatio: row.ratio, direction: 'row' }
 }
 
 const manyImgPreviews = (images, options) => {
-  const previews = []
-  const variant = getOptimalVariant(images, options)
+  let direction
+  const { variant, previews, diff, aspectRatio } = getOptimalVariant(images, options)
 
   if (variant.singleRow) {
-    const row = prepareRow(variant.singleRow, true)
-    for (let image of row.images) {
-      previews.push(image)
-    }
+    direction = 'row'
   } else if (variant.cols) {
-    const cols = variant.cols.map((col) => { return prepareCol(col) })
-    const row = prepareRow(cols)
-
-    for (let col of row.images) {
-      for (let nestedImage of col.images) {
-        previews.push(nestedImage)
-      }
-    }
+    direction = 'column'
   } else if (variant.rows) {
-    const rows = variant.rows.map((row) => { return prepareRow(row) })
-    const col = prepareCol(rows)
-    const scale = 100 / col.width
-
-    for (let row of col.images) {
-      for (let nestedImage of row.images) {
-        previews.push(applyScale(nestedImage, scale))
-      }
-    }
+    direction = 'row'
   }
 
-  return previews
+  return {
+    aspectRatio,
+    previews: previews,
+    direction,
+    diff
+  }
 }
 
+const MAX_VERTICAL_IMAGE_RATIO = 0.56
 const fixVerticalImages = (images) => {
   for (let image of images) {
-    if (getRatio(image) >= MAX_VERTICAL_IMAGE_RATIO) continue
+    if (aspectRatio(image) >= MAX_VERTICAL_IMAGE_RATIO) continue
     image.height = image.width / MAX_VERTICAL_IMAGE_RATIO
   }
 }
 
+const MIN_HORIZONTAL_IMAGE_RATIO = 1.77
+const fixHorizontalImages = (images) => {
+  for (let image of images) {
+    if (aspectRatio(image) <= MIN_HORIZONTAL_IMAGE_RATIO) continue
+    image.width = image.height * MIN_HORIZONTAL_IMAGE_RATIO
+  }
+}
+
 module.exports = (images, options = {type: 'desktop'}) => {
-  let processorFn
+  let processorFn = (images, _options) => images
   images = copyImages(images) // don't touch original images
 
-  fixVerticalImages(images)
-
   if (images.length === 1) {
+    fixVerticalImages(images)
+    fixHorizontalImages(images)
     processorFn = singlePreview
   } else if (images.length === 2) {
+    fixVerticalImages(images)
+    fixHorizontalImages(images)
     processorFn = twoImgPreviews
-  } else if (images.length > 2) {
+  } else if (images.length > 2 && images.length <= 4) {
+    fixVerticalImages(images)
+    fixHorizontalImages(images)
     processorFn = manyImgPreviews
-  } else {
-    processorFn = () => {}
+  } else if (images.length > 4) {
+    const averageRatio = getAverageRatio(images)
+    options = { ...options, averageRatio }
+
+    cropImages(images, averageRatio)
+    processorFn = manyImgPreviews
   }
 
   return processorFn(images, options)
