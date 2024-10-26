@@ -420,7 +420,7 @@ var prepareVariants = function prepareVariants(images, options) {
       var v = _step5.value;
 
       if (v.length === 1) {
-        variants.push({ singleRow: v[0] });
+        variants.push({ rows: v });
       } else {
         variants.push({ rows: v });
         if (isSmallGroup && v[0].length === 1) {
@@ -556,7 +556,7 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
   var optimalPreviews = void 0;
 
   // all values here are hand-adjusted to get the minimum amount of produced small images
-  var targetRatio = lerp(1.5, .47, images.length / MAX_IMAGES);
+  var targetRatio = lerp(1.35, .47, images.length / MAX_IMAGES);
 
   var _iteratorNormalCompletion10 = true;
   var _didIteratorError10 = false;
@@ -566,7 +566,7 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
     for (var _iterator10 = variants[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
       var variant = _step10.value;
 
-      var mosaicShape = variant.singleRow ? prepareRow(variant.singleRow) : variant.cols ? prepareRow(variant.cols.map(prepareCol)) : prepareCol(variant.rows.map(prepareRow));
+      var mosaicShape = variant.cols ? prepareRow(variant.cols.map(prepareCol)) : prepareCol(variant.rows.map(prepareRow));
 
       var ratio = aspectRatio(mosaicShape);
       var previews = getPreviews(variant, mosaicShape);
@@ -584,6 +584,8 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
 
           ratio > targetRatio ? ratio *= 1.3 : ratio /= 1.3;
         }
+
+        // encourage cols layout
       } catch (err) {
         _didIteratorError11 = true;
         _iteratorError11 = err;
@@ -597,6 +599,10 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
             throw _iteratorError11;
           }
         }
+      }
+
+      if (variant.cols) {
+        ratio > targetRatio ? ratio /= 1.15 : ratio *= 1.15;
       }
 
       if (optimalVariant) {
@@ -683,9 +689,7 @@ var manyImgPreviews = function manyImgPreviews(images, options) {
       diff = _getOptimalVariant.diff,
       aspectRatio = _getOptimalVariant.aspectRatio;
 
-  if (variant.singleRow) {
-    direction = 'row';
-  } else if (variant.cols) {
+  if (variant.cols) {
     direction = 'column';
   } else if (variant.rows) {
     direction = 'row';
