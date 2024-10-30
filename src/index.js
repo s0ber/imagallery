@@ -178,7 +178,7 @@ const prepareVariants = (images, options) => {
 
   for (let v of variations) {
     if (v.length === 1) {
-      variants.push({singleRow: v[0]})
+      variants.push({rows: v})
     } else {
       variants.push({rows: v})
       if (isSmallGroup && v[0].length === 1) {
@@ -218,15 +218,12 @@ const getOptimalVariant = (images, options) => {
   let optimalPreviews
 
   // all values here are hand-adjusted to get the minimum amount of produced small images
-  let targetRatio = lerp(1.5, .47, images.length / MAX_IMAGES)
+  let targetRatio = lerp(1.35, .47, images.length / MAX_IMAGES)
 
   for (let variant of variants) {
-    const mosaicShape =
-      variant.singleRow
-        ? prepareRow(variant.singleRow)
-        : variant.cols
-          ? prepareRow(variant.cols.map(prepareCol))
-          : prepareCol(variant.rows.map(prepareRow))
+    const mosaicShape = variant.cols
+      ? prepareRow(variant.cols.map(prepareCol))
+      : prepareCol(variant.rows.map(prepareRow))
 
     let ratio = aspectRatio(mosaicShape)
     const previews = getPreviews(variant, mosaicShape)
@@ -234,6 +231,11 @@ const getOptimalVariant = (images, options) => {
     // penalize current variant for every small image
     for (let _badPreview of previews.filter(p => p.width <= 20 || p.height <= 20)) {
       ratio > targetRatio ? (ratio *= 1.3) : (ratio /= 1.3)
+    }
+
+    // encourage cols layout
+    if (variant.cols) {
+      ratio > targetRatio ? (ratio /= 1.15) : (ratio *= 1.15)
     }
 
     if (optimalVariant) {
@@ -280,9 +282,7 @@ const manyImgPreviews = (images, options) => {
   let direction
   const { variant, previews, diff, aspectRatio } = getOptimalVariant(images, options)
 
-  if (variant.singleRow) {
-    direction = 'row'
-  } else if (variant.cols) {
+  if (variant.cols) {
     direction = 'column'
   } else if (variant.rows) {
     direction = 'row'
