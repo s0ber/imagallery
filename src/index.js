@@ -90,9 +90,10 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
   if (maxRows >= 1) variants.push([images])
 
   if (maxRows >= 2) {
+    const MIN_ITEMS_IN_ROW_1 = 1
     const MAX_ITEMS_IN_ROW_1 = 3
 
-    for (let i = 1; i < MAX_ITEMS_IN_ROW_1 + 1; i++) {
+    for (let i = MIN_ITEMS_IN_ROW_1; i <= MAX_ITEMS_IN_ROW_1; i++) {
       variants.push([images.slice(0, i), images.slice(i, images.length)])
     }
   }
@@ -101,9 +102,10 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
     for (let [p1, p2] of [...variants]) {
       if (!p1 || !p2) continue
 
+      const MIN_ITEMS_IN_ROW_2 = 3
       const MAX_ITEMS_IN_ROW_2 = averageRatio < 0.85 ? 4 : 3
 
-      for (let i = 1; i < MAX_ITEMS_IN_ROW_2 + 1; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_2; i <= MAX_ITEMS_IN_ROW_2; i++) {
         variants.push([p1, p2.slice(0, i), p2.slice(i, p2.length)])
       }
     }
@@ -113,9 +115,10 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
     for (let [p1, p2, p3] of [...variants]) {
       if (!p1 || !p2 || !p3) continue
 
+      const MIN_ITEMS_IN_ROW_3 = 2
       const MAX_ITEMS_IN_ROW_3 = 3
 
-      for (let i = 1; i < MAX_ITEMS_IN_ROW_3 + 1; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_3; i <= MAX_ITEMS_IN_ROW_3; i++) {
         variants.push([p1, p2, p3.slice(0, i), p3.slice(i, p3.length)])
       }
     }
@@ -125,9 +128,10 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
     for (let [p1, p2, p3, p4] of [...variants]) {
       if (!p1 || !p2 || !p3 || !p4) continue
 
+      const MIN_ITEMS_IN_ROW_4 = 3
       const MAX_ITEMS_IN_ROW_4 = 4
 
-      for (let i = 1; i < MAX_ITEMS_IN_ROW_4 + 1; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_4; i <= MAX_ITEMS_IN_ROW_4; i++) {
         variants.push([p1, p2, p3, p4.slice(0, i), p4.slice(i, p4.length)])
       }
     }
@@ -137,9 +141,10 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
     for (let [p1, p2, p3, p4, p5] of [...variants]) {
       if (!p1 || !p2 || !p3 || !p4 || !p5) continue
 
+      const MIN_ITEMS_IN_ROW_5 = 2
       const MAX_ITEMS_IN_ROW_5 = 4
 
-      for (let i = 1; i < MAX_ITEMS_IN_ROW_5 + 1; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_5; i <= MAX_ITEMS_IN_ROW_5; i++) {
         variants.push([p1, p2, p3, p4, p5.slice(0, i), p5.slice(i, p5.length)])
       }
     }
@@ -149,9 +154,10 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
     for (let [p1, p2, p3, p4, p5, p6] of [...variants]) {
       if (!p1 || !p2 || !p3 || !p4 || !p5 || !p6) continue
 
+      const MIN_ITEMS_IN_ROW_6 = 3
       const MAX_ITEMS_IN_ROW_6 = 3
 
-      for (let i = 1; i < MAX_ITEMS_IN_ROW_6; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_6; i <= MAX_ITEMS_IN_ROW_6; i++) {
         variants.push([p1, p2, p3, p4, p5, p6.slice(0, i), p6.slice(i, p6.length)])
       }
     }
@@ -168,7 +174,6 @@ const prepareVariants = (images, options) => {
     if (isSmallGroup) return 2
     if (images.length <= 8) return 3
     if (images.length <= 12) return 4
-    if (images.length <= 16) return 5
     if (images.length <= 18) return 6
 
     return 7
@@ -215,10 +220,13 @@ const getOptimalVariant = (images, options) => {
   const variants = prepareVariants(images, options)
   let optimalVariant
   let optimalRatio
+  let optimalOriginalRatio
   let optimalPreviews
 
   // all values here are hand-adjusted to get the minimum amount of produced small images
-  let targetRatio = lerp(1.35, .47, images.length / MAX_IMAGES)
+  let targetRatio = lerp(1.25, .47, images.length / MAX_IMAGES)
+
+  console.log('Target ratio', targetRatio)
 
   for (let variant of variants) {
     const mosaicShape = variant.cols
@@ -226,11 +234,12 @@ const getOptimalVariant = (images, options) => {
       : prepareCol(variant.rows.map(prepareRow))
 
     let ratio = aspectRatio(mosaicShape)
+    let originalRatio = ratio
     const previews = getPreviews(variant, mosaicShape)
 
     // penalize current variant for every small image
     for (let _badPreview of previews.filter(p => p.width <= 20 || p.height <= 20)) {
-      ratio > targetRatio ? (ratio *= 1.3) : (ratio /= 1.3)
+      ratio > targetRatio ? (ratio *= 1.2) : (ratio /= 1.2)
     }
 
     // encourage cols layout
@@ -241,17 +250,19 @@ const getOptimalVariant = (images, options) => {
     if (optimalVariant) {
       if (Math.abs(ratio - targetRatio) < Math.abs(optimalRatio - targetRatio)) {
         optimalRatio = ratio
+        optimalOriginalRatio = originalRatio
         optimalVariant = variant
         optimalPreviews = previews
       }
     } else {
       optimalRatio = ratio
+      optimalOriginalRatio = originalRatio
       optimalVariant = variant
       optimalPreviews = previews
     }
   }
 
-  return { variant: optimalVariant, previews: optimalPreviews, aspectRatio: optimalRatio, diff: Math.abs(optimalRatio - targetRatio) }
+  return { variant: optimalVariant, previews: optimalPreviews, aspectRatio: optimalOriginalRatio, diff: Math.abs(optimalOriginalRatio - targetRatio) }
 }
 
 const singlePreview = images => {
@@ -313,7 +324,12 @@ const fixHorizontalImages = (images) => {
 }
 
 module.exports = (images, options = {type: 'desktop'}) => {
-  let processorFn = (images, _options) => images
+  let processorFn = (images, _options) => ({
+    previews: images,
+    aspectRatio: 1,
+    direction: 'row'
+  })
+
   images = copyImages(images) // don't touch original images
 
   if (images.length === 1) {
@@ -336,5 +352,7 @@ module.exports = (images, options = {type: 'desktop'}) => {
     processorFn = manyImgPreviews
   }
 
-  return processorFn(images, options)
+  const result = processorFn(images, options)
+
+  return result
 }

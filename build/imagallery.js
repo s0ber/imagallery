@@ -285,9 +285,10 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
   if (maxRows >= 1) variants.push([images]);
 
   if (maxRows >= 2) {
+    var MIN_ITEMS_IN_ROW_1 = 1;
     var MAX_ITEMS_IN_ROW_1 = 3;
 
-    for (var i = 1; i < MAX_ITEMS_IN_ROW_1 + 1; i++) {
+    for (var i = MIN_ITEMS_IN_ROW_1; i <= MAX_ITEMS_IN_ROW_1; i++) {
       variants.push([images.slice(0, i), images.slice(i, images.length)]);
     }
   }
@@ -302,9 +303,10 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
 
       if (!p1 || !p2) continue;
 
+      var MIN_ITEMS_IN_ROW_2 = 3;
       var MAX_ITEMS_IN_ROW_2 = averageRatio < 0.85 ? 4 : 3;
 
-      for (var _i2 = 1; _i2 < MAX_ITEMS_IN_ROW_2 + 1; _i2++) {
+      for (var _i2 = MIN_ITEMS_IN_ROW_2; _i2 <= MAX_ITEMS_IN_ROW_2; _i2++) {
         variants.push([p1, p2.slice(0, _i2), p2.slice(_i2, p2.length)]);
       }
     }
@@ -321,9 +323,10 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
 
       if (!p1 || !p2 || !p3) continue;
 
+      var MIN_ITEMS_IN_ROW_3 = 2;
       var MAX_ITEMS_IN_ROW_3 = 3;
 
-      for (var _i4 = 1; _i4 < MAX_ITEMS_IN_ROW_3 + 1; _i4++) {
+      for (var _i4 = MIN_ITEMS_IN_ROW_3; _i4 <= MAX_ITEMS_IN_ROW_3; _i4++) {
         variants.push([p1, p2, p3.slice(0, _i4), p3.slice(_i4, p3.length)]);
       }
     }
@@ -341,9 +344,10 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
 
       if (!p1 || !p2 || !p3 || !p4) continue;
 
+      var MIN_ITEMS_IN_ROW_4 = 3;
       var MAX_ITEMS_IN_ROW_4 = 4;
 
-      for (var _i6 = 1; _i6 < MAX_ITEMS_IN_ROW_4 + 1; _i6++) {
+      for (var _i6 = MIN_ITEMS_IN_ROW_4; _i6 <= MAX_ITEMS_IN_ROW_4; _i6++) {
         variants.push([p1, p2, p3, p4.slice(0, _i6), p4.slice(_i6, p4.length)]);
       }
     }
@@ -362,9 +366,10 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
 
       if (!p1 || !p2 || !p3 || !p4 || !p5) continue;
 
+      var MIN_ITEMS_IN_ROW_5 = 2;
       var MAX_ITEMS_IN_ROW_5 = 4;
 
-      for (var _i8 = 1; _i8 < MAX_ITEMS_IN_ROW_5 + 1; _i8++) {
+      for (var _i8 = MIN_ITEMS_IN_ROW_5; _i8 <= MAX_ITEMS_IN_ROW_5; _i8++) {
         variants.push([p1, p2, p3, p4, p5.slice(0, _i8), p5.slice(_i8, p5.length)]);
       }
     }
@@ -384,9 +389,10 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
 
       if (!p1 || !p2 || !p3 || !p4 || !p5 || !p6) continue;
 
+      var MIN_ITEMS_IN_ROW_6 = 3;
       var MAX_ITEMS_IN_ROW_6 = 3;
 
-      for (var _i10 = 1; _i10 < MAX_ITEMS_IN_ROW_6; _i10++) {
+      for (var _i10 = MIN_ITEMS_IN_ROW_6; _i10 <= MAX_ITEMS_IN_ROW_6; _i10++) {
         variants.push([p1, p2, p3, p4, p5, p6.slice(0, _i10), p6.slice(_i10, p6.length)]);
       }
     }
@@ -403,7 +409,6 @@ var prepareVariants = function prepareVariants(images, options) {
     if (isSmallGroup) return 2;
     if (images.length <= 8) return 3;
     if (images.length <= 12) return 4;
-    if (images.length <= 16) return 5;
     if (images.length <= 18) return 6;
 
     return 7;
@@ -553,10 +558,13 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
   var variants = prepareVariants(images, options);
   var optimalVariant = void 0;
   var optimalRatio = void 0;
+  var optimalOriginalRatio = void 0;
   var optimalPreviews = void 0;
 
   // all values here are hand-adjusted to get the minimum amount of produced small images
-  var targetRatio = lerp(1.35, .47, images.length / MAX_IMAGES);
+  var targetRatio = lerp(1.25, .47, images.length / MAX_IMAGES);
+
+  console.log('Target ratio', targetRatio);
 
   var _iteratorNormalCompletion10 = true;
   var _didIteratorError10 = false;
@@ -569,6 +577,7 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
       var mosaicShape = variant.cols ? prepareRow(variant.cols.map(prepareCol)) : prepareCol(variant.rows.map(prepareRow));
 
       var ratio = aspectRatio(mosaicShape);
+      var originalRatio = ratio;
       var previews = getPreviews(variant, mosaicShape);
 
       // penalize current variant for every small image
@@ -582,7 +591,7 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
         })[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
           var _badPreview = _step11.value;
 
-          ratio > targetRatio ? ratio *= 1.3 : ratio /= 1.3;
+          ratio > targetRatio ? ratio *= 1.2 : ratio /= 1.2;
         }
 
         // encourage cols layout
@@ -608,11 +617,13 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
       if (optimalVariant) {
         if (Math.abs(ratio - targetRatio) < Math.abs(optimalRatio - targetRatio)) {
           optimalRatio = ratio;
+          optimalOriginalRatio = originalRatio;
           optimalVariant = variant;
           optimalPreviews = previews;
         }
       } else {
         optimalRatio = ratio;
+        optimalOriginalRatio = originalRatio;
         optimalVariant = variant;
         optimalPreviews = previews;
       }
@@ -632,7 +643,7 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
     }
   }
 
-  return { variant: optimalVariant, previews: optimalPreviews, aspectRatio: optimalRatio, diff: Math.abs(optimalRatio - targetRatio) };
+  return { variant: optimalVariant, previews: optimalPreviews, aspectRatio: optimalOriginalRatio, diff: Math.abs(optimalOriginalRatio - targetRatio) };
 };
 
 var singlePreview = function singlePreview(images) {
@@ -765,8 +776,13 @@ module.exports = function (images) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { type: 'desktop' };
 
   var processorFn = function processorFn(images, _options) {
-    return images;
+    return {
+      previews: images,
+      aspectRatio: 1,
+      direction: 'row'
+    };
   };
+
   images = copyImages(images); // don't touch original images
 
   if (images.length === 1) {
@@ -789,7 +805,9 @@ module.exports = function (images) {
     processorFn = manyImgPreviews;
   }
 
-  return processorFn(images, options);
+  var result = processorFn(images, options);
+
+  return result;
 };
 
 /***/ }),
