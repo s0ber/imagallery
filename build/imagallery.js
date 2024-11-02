@@ -564,8 +564,6 @@ var getOptimalVariant = function getOptimalVariant(images, options) {
   // all values here are hand-adjusted to get the minimum amount of produced small images
   var targetRatio = lerp(1.25, .47, images.length / MAX_IMAGES);
 
-  console.log('Target ratio', targetRatio);
-
   var _iteratorNormalCompletion10 = true;
   var _didIteratorError10 = false;
   var _iteratorError10 = undefined;

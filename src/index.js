@@ -226,8 +226,6 @@ const getOptimalVariant = (images, options) => {
   // all values here are hand-adjusted to get the minimum amount of produced small images
   let targetRatio = lerp(1.25, .47, images.length / MAX_IMAGES)
 
-  console.log('Target ratio', targetRatio)
-
   for (let variant of variants) {
     const mosaicShape = variant.cols
       ? prepareRow(variant.cols.map(prepareCol))
