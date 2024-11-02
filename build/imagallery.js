@@ -409,7 +409,7 @@ var prepareVariants = function prepareVariants(images, options) {
     if (isSmallGroup) return 2;
     if (images.length <= 8) return 3;
     if (images.length <= 12) return 4;
-    if (images.length <= 18) return 6;
+    // if (images.length <= 18) return 6
 
     return 7;
   }();
