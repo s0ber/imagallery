@@ -29,7 +29,18 @@ const renderPreviews = ($container, images) => {
   const $wrapperInner = $('<div class="wrapper-inner" />')
   $wrapper.append($wrapperInner)
 
-  const { previews, aspectRatio, direction, diff } = Imagallery(images)
+  const { previews, diff, aspectRatio } = Imagallery(images)
+  console.log(aspectRatio)
+
+  if (previews.length !== images.length) {
+    throw new Error('images sizes were modified during gallery preparation')
+  }
+
+  for (let i = 0; i < previews.length; i++) {
+    if (previews[i].gallery_preview_url !== images[i].gallery_preview_url) {
+      throw new Error('image sources are not matching')
+    }
+  }
 
   // console.log(aspectRatio)
   // console.log(direction)
@@ -70,6 +81,18 @@ const renderInCol = (fn) => {
 console.time('previewing')
 
 const items = [imageV, imageH, imageS, imageVV, imageH, imageHH]
+// renderInCol(($col) => {
+//   renderPreviews($col, ssItems)
+// })
+// renderInCol(($col) => {
+//   renderPreviews($col, ssItems2)
+// })
+// renderInCol(($col) => {
+//   renderPreviews($col, ssItems3)
+// })
+// renderInCol(($col) => {
+//   renderPreviews($col, ssItems4)
+// })
 
 renderInCol(($col) => {
   for (let item of items) {
