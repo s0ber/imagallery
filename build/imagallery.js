@@ -288,7 +288,7 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
     var MIN_ITEMS_IN_ROW_1 = 1;
     var MAX_ITEMS_IN_ROW_1 = 3;
 
-    for (var i = MIN_ITEMS_IN_ROW_1; i <= MAX_ITEMS_IN_ROW_1; i++) {
+    for (var i = MIN_ITEMS_IN_ROW_1; i <= Math.min(MAX_ITEMS_IN_ROW_1, images.length - 1); i++) {
       variants.push([images.slice(0, i), images.slice(i, images.length)]);
     }
   }
@@ -306,7 +306,7 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
       var MIN_ITEMS_IN_ROW_2 = 3;
       var MAX_ITEMS_IN_ROW_2 = averageRatio < 0.85 ? 4 : 3;
 
-      for (var _i2 = MIN_ITEMS_IN_ROW_2; _i2 <= MAX_ITEMS_IN_ROW_2; _i2++) {
+      for (var _i2 = MIN_ITEMS_IN_ROW_2; _i2 <= Math.min(MAX_ITEMS_IN_ROW_2, p2.length - 1); _i2++) {
         variants.push([p1, p2.slice(0, _i2), p2.slice(_i2, p2.length)]);
       }
     }
@@ -326,7 +326,7 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
       var MIN_ITEMS_IN_ROW_3 = 2;
       var MAX_ITEMS_IN_ROW_3 = 3;
 
-      for (var _i4 = MIN_ITEMS_IN_ROW_3; _i4 <= MAX_ITEMS_IN_ROW_3; _i4++) {
+      for (var _i4 = MIN_ITEMS_IN_ROW_3; _i4 <= Math.min(MAX_ITEMS_IN_ROW_3, p3.length - 1); _i4++) {
         variants.push([p1, p2, p3.slice(0, _i4), p3.slice(_i4, p3.length)]);
       }
     }
@@ -347,7 +347,7 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
       var MIN_ITEMS_IN_ROW_4 = 3;
       var MAX_ITEMS_IN_ROW_4 = 4;
 
-      for (var _i6 = MIN_ITEMS_IN_ROW_4; _i6 <= MAX_ITEMS_IN_ROW_4; _i6++) {
+      for (var _i6 = MIN_ITEMS_IN_ROW_4; _i6 <= Math.min(MAX_ITEMS_IN_ROW_4, p4.length - 1); _i6++) {
         variants.push([p1, p2, p3, p4.slice(0, _i6), p4.slice(_i6, p4.length)]);
       }
     }
@@ -369,7 +369,7 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
       var MIN_ITEMS_IN_ROW_5 = 2;
       var MAX_ITEMS_IN_ROW_5 = 4;
 
-      for (var _i8 = MIN_ITEMS_IN_ROW_5; _i8 <= MAX_ITEMS_IN_ROW_5; _i8++) {
+      for (var _i8 = MIN_ITEMS_IN_ROW_5; _i8 <= Math.min(MAX_ITEMS_IN_ROW_5, p5.length - 1); _i8++) {
         variants.push([p1, p2, p3, p4, p5.slice(0, _i8), p5.slice(_i8, p5.length)]);
       }
     }
@@ -392,7 +392,7 @@ var prepareRowsVariations = function prepareRowsVariations(images, maxRows, _ref
       var MIN_ITEMS_IN_ROW_6 = 3;
       var MAX_ITEMS_IN_ROW_6 = 3;
 
-      for (var _i10 = MIN_ITEMS_IN_ROW_6; _i10 <= MAX_ITEMS_IN_ROW_6; _i10++) {
+      for (var _i10 = MIN_ITEMS_IN_ROW_6; _i10 <= Math.min(MAX_ITEMS_IN_ROW_6, p6.length - 1); _i10++) {
         variants.push([p1, p2, p3, p4, p5, p6.slice(0, _i10), p6.slice(_i10, p6.length)]);
       }
     }

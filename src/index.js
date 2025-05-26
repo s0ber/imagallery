@@ -93,7 +93,7 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
     const MIN_ITEMS_IN_ROW_1 = 1
     const MAX_ITEMS_IN_ROW_1 = 3
 
-    for (let i = MIN_ITEMS_IN_ROW_1; i <= MAX_ITEMS_IN_ROW_1; i++) {
+    for (let i = MIN_ITEMS_IN_ROW_1; i <= Math.min(MAX_ITEMS_IN_ROW_1, images.length - 1); i++) {
       variants.push([images.slice(0, i), images.slice(i, images.length)])
     }
   }
@@ -105,7 +105,7 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
       const MIN_ITEMS_IN_ROW_2 = 3
       const MAX_ITEMS_IN_ROW_2 = averageRatio < 0.85 ? 4 : 3
 
-      for (let i = MIN_ITEMS_IN_ROW_2; i <= MAX_ITEMS_IN_ROW_2; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_2; i <= Math.min(MAX_ITEMS_IN_ROW_2, p2.length - 1); i++) {
         variants.push([p1, p2.slice(0, i), p2.slice(i, p2.length)])
       }
     }
@@ -118,7 +118,7 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
       const MIN_ITEMS_IN_ROW_3 = 2
       const MAX_ITEMS_IN_ROW_3 = 3
 
-      for (let i = MIN_ITEMS_IN_ROW_3; i <= MAX_ITEMS_IN_ROW_3; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_3; i <= Math.min(MAX_ITEMS_IN_ROW_3, p3.length - 1); i++) {
         variants.push([p1, p2, p3.slice(0, i), p3.slice(i, p3.length)])
       }
     }
@@ -131,7 +131,7 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
       const MIN_ITEMS_IN_ROW_4 = 3
       const MAX_ITEMS_IN_ROW_4 = 4
 
-      for (let i = MIN_ITEMS_IN_ROW_4; i <= MAX_ITEMS_IN_ROW_4; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_4; i <= Math.min(MAX_ITEMS_IN_ROW_4, p4.length - 1); i++) {
         variants.push([p1, p2, p3, p4.slice(0, i), p4.slice(i, p4.length)])
       }
     }
@@ -144,7 +144,7 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
       const MIN_ITEMS_IN_ROW_5 = 2
       const MAX_ITEMS_IN_ROW_5 = 4
 
-      for (let i = MIN_ITEMS_IN_ROW_5; i <= MAX_ITEMS_IN_ROW_5; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_5; i <= Math.min(MAX_ITEMS_IN_ROW_5, p5.length - 1); i++) {
         variants.push([p1, p2, p3, p4, p5.slice(0, i), p5.slice(i, p5.length)])
       }
     }
@@ -157,7 +157,7 @@ const prepareRowsVariations = (images, maxRows, { averageRatio }) => {
       const MIN_ITEMS_IN_ROW_6 = 3
       const MAX_ITEMS_IN_ROW_6 = 3
 
-      for (let i = MIN_ITEMS_IN_ROW_6; i <= MAX_ITEMS_IN_ROW_6; i++) {
+      for (let i = MIN_ITEMS_IN_ROW_6; i <= Math.min(MAX_ITEMS_IN_ROW_6, p6.length - 1); i++) {
         variants.push([p1, p2, p3, p4, p5, p6.slice(0, i), p6.slice(i, p6.length)])
       }
     }
